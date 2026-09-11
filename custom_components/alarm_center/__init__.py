@@ -14,6 +14,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.loader import async_get_integration
 
 from . import websocket_api
 from .const import (
@@ -28,7 +29,6 @@ from .const import (
     SERVICE_CLEAR,
     SERVICE_RAISE,
     STATIC_URL,
-    VERSION,
 )
 from .manager import AlarmManager
 from .notifier import Notifier
@@ -144,6 +144,13 @@ async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> Non
 
 async def _async_register_panel(hass: HomeAssistant) -> None:
     """Serve the panel and card JS, add the panel to the sidebar."""
+    # manifest.json is the single source of truth for the version, so a
+    # release only has to bump it in one place. It is used to bust the
+    # browser cache for the panel and card, which matters: without it users
+    # keep running the previous frontend after an update.
+    integration = await async_get_integration(hass, DOMAIN)
+    version = str(integration.version or "dev")
+
     already_set_up = PANEL_URL_PATH in hass.data.get("frontend_panels", {})
 
     if not already_set_up:
@@ -161,16 +168,16 @@ async def _async_register_panel(hass: HomeAssistant) -> None:
             webcomponent_name=PANEL_COMPONENT_NAME,
             frontend_url_path=PANEL_URL_PATH,
             # The version query busts the browser cache after an update.
-            module_url=f"{STATIC_URL}/panel.js?v={VERSION}",
+            module_url=f"{STATIC_URL}/panel.js?v={version}",
             sidebar_title=PANEL_TITLE,
             sidebar_icon=PANEL_ICON,
             require_admin=False,
-            config={"version": VERSION},
+            config={"version": version},
         )
 
     # Loads the dashboard card on every page, so it works without adding a
     # manual resource in Settings > Dashboards > Resources.
-    frontend.add_extra_js_url(hass, f"{STATIC_URL}/alarm-center-card.js?v={VERSION}")
+    frontend.add_extra_js_url(hass, f"{STATIC_URL}/alarm-center-card.js?v={version}")
 
 
 @callback

@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Final
 
 DOMAIN: Final = "alarm_center"
-VERSION: Final = "0.2.0"
 
 # Frontend / panel
 PANEL_URL_PATH: Final = "alarm-center"

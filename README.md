@@ -428,6 +428,20 @@ Clicking a row opens the entity's more-info dialog (or the panel, with
 dashboard. The card shares the same websocket subscription as the panel, so
 both update at the same time.
 
+## Branding
+
+Brand assets live in `custom_components/alarm_center/brand/` - `icon.png`
+(256x256), `icon@2x.png` (512x512), `logo.png` and `logo@2x.png`. HACS looks
+for a local brand directory first and only falls back to the
+[home-assistant/brands](https://github.com/home-assistant/brands) repository
+if there isn't one.
+
+They're generated rather than drawn, so they can be changed reproducibly:
+
+```bash
+python3 scripts/make_brand.py
+```
+
 ## Documentation
 
 * [Architecture](docs/ARCHITECTURE.md) - how the code is laid out, the alarm

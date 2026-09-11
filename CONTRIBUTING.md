@@ -21,9 +21,12 @@ The tests deliberately run without Home Assistant installed - see below.
 To try a change in a real Home Assistant, symlink or copy
 `custom_components/alarm_center` into your `config/custom_components/` and
 restart. Frontend changes only need a hard reload (Ctrl+Shift+R), since the
-static files are served without cache headers - but bump `VERSION` in
-`const.py` when you release, because the panel URL's cache-busting query
-string comes from it.
+static files are served without cache headers.
+
+The version lives in `manifest.json` and nowhere else; the integration reads
+it at runtime to bust the browser cache for the frontend files. Releases are
+tagged `vX.Y.Z` and a workflow stamps that version into the published asset,
+so you do not need to edit it in a second place.
 
 ## Testing
 

@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and attach release asset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive version from the tag
+        id: version
+        run: |
+          version="${GITHUB_REF#refs/tags/}"
+          version="${version#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Releasing $version"
+
+      - name: Write the version into manifest.json
+        run: |
+          jq --arg v "${{ steps.version.outputs.version }}" \
+            '.version = $v' \
+            custom_components/alarm_center/manifest.json > /tmp/manifest.json
+          mv /tmp/manifest.json custom_components/alarm_center/manifest.json
+          cat custom_components/alarm_center/manifest.json
+
+      - name: Build the asset
+        run: |
+          cd custom_components/alarm_center
+          zip -r alarm_center.zip . -x "*__pycache__*" -x "*.pyc"
+
+      - name: Attach it to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: custom_components/alarm_center/alarm_center.zip

@@ -104,9 +104,24 @@ payload fields (`channel`, `importance`, `media_stream`, `tts_text`).
 
 Do not claim something works in Home Assistant because it compiles.
 
-## Before publishing a release
+## Brand assets
 
-`VERSION` in `const.py` and `version` in `manifest.json` must match and be
-bumped. The panel's cache-busting query string comes from `VERSION`, so
-forgetting it means users load a stale `panel.js` - this has bitten this
-project already.
+`custom_components/alarm_center/brand/` holds `icon.png`, `icon@2x.png`,
+`logo.png` and `logo@2x.png`. HACS requires at least `icon.png` there, or
+the domain must be registered in home-assistant/brands. They are generated
+by `scripts/make_brand.py` (Pillow, drawn at 4x and downsampled) - edit the
+script rather than the PNGs.
+
+## Versioning
+
+`manifest.json` is the single source of truth. There is deliberately no
+`VERSION` constant any more - `__init__.py` reads the version from the
+loaded integration via `async_get_integration()` and uses it to bust the
+browser cache for `panel.js` and the card. Keeping two copies in sync by
+hand failed in practice, twice.
+
+Releasing: create a GitHub release with tag `vX.Y.Z`. The release workflow
+stamps that version into `manifest.json` inside the published
+`alarm_center.zip` asset, which is what HACS installs (`zip_release` is set
+in `hacs.json`). Bump `manifest.json` in the repo too, so manual installers
+and the tag guard in CI agree.

@@ -10,6 +10,27 @@ on:
   workflow_dispatch:
 
 jobs:
+  version:
+    name: Tag matches manifest
+    # Only meaningful on a tag push. The release workflow stamps the tag
+    # version into the published asset, so this is a backstop for the repo
+    # file itself, which is what manual installers get.
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          tag="${tag#v}"
+          manifest=$(jq -r .version custom_components/alarm_center/manifest.json)
+          echo "tag=$tag manifest=$manifest"
+          if [ "$tag" != "$manifest" ]; then
+            echo "::error::manifest.json says $manifest but the tag is $tag."
+            echo "::error::Bump manifest.json and re-tag, or let the release workflow build the asset."
+            exit 1
+          fi
+
   tests:
     name: Unit tests
     runs-on: ubuntu-latest
