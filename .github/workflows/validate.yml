@@ -1,0 +1,53 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+  schedule:
+    # Catches breakage from new Home Assistant or HACS releases rather than
+    # from our own changes.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Run tests
+        run: python -m unittest discover -s tests -v
+      - name: Compile check
+        run: python -m compileall -q custom_components/alarm_center
+
+  frontend:
+    name: Frontend syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax check
+        run: |
+          node --check custom_components/alarm_center/frontend/panel.js
+          node --check custom_components/alarm_center/frontend/alarm-center-card.js
+
+  hassfest:
+    name: Home Assistant hassfest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: home-assistant/actions/hassfest@master
+
+  hacs:
+    name: HACS validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hacs/action@main
+        with:
+          category: integration

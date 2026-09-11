@@ -1,0 +1,63 @@
+raise_alarm:
+  name: Raise alarm
+  description: >-
+    Raise a manual alarm. Raising the same key again while the alarm is still
+    open reactivates it instead of creating a new alarm.
+  fields:
+    key:
+      name: Key
+      description: Stable identity of the condition, for example pump_room_leak.
+      required: true
+      selector:
+        text:
+    name:
+      name: Name
+      description: Name shown in the alarm list.
+      required: true
+      selector:
+        text:
+    level:
+      name: Level
+      default: warning
+      selector:
+        select:
+          options: [critical, error, warning, notice]
+    entity_id:
+      name: Entity
+      description: Optional entity to show with the alarm.
+      selector:
+        entity:
+    message:
+      name: Message
+      selector:
+        text:
+    notify:
+      name: Notify
+      default: true
+      selector:
+        boolean:
+
+clear_alarm:
+  name: Clear alarm
+  description: >-
+    Mark a manual alarm inactive. It stays in the list until acknowledged.
+  fields:
+    key:
+      name: Key
+      required: true
+      selector:
+        text:
+
+acknowledge:
+  name: Acknowledge
+  description: Acknowledge one alarm by its id.
+  fields:
+    alarm_id:
+      name: Alarm id
+      required: true
+      selector:
+        text:
+
+acknowledge_all:
+  name: Acknowledge all
+  description: Acknowledge every open alarm.

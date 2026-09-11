@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest something Alarm Center should do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check [docs/ROADMAP.md](../blob/main/docs/ROADMAP.md) first -
+        several known gaps are already written up there, and commenting on
+        one of those is more useful than a duplicate issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve
+      description: The situation you are in, not just the feature you want.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: How you imagine it working
+    validations:
+      required: false

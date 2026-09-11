@@ -1,0 +1,52 @@
+name: Bug report
+description: Something is not working as described
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Most of this project's Home Assistant API usage
+        has been verified by hand rather than automatically, so precise
+        version information genuinely helps.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.8.1"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Alarm Center version
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen
+      multiple: true
+      options:
+        - Sidebar panel
+        - Dashboard card
+        - Notifications
+        - Rules / rule editor
+        - Notify target services
+        - Setup / installation
+        - Somewhere else
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: >-
+        From Settings → System → Logs, plus the browser console for panel or
+        card issues. This is automatically formatted as code.
+      render: shell

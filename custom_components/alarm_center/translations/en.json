@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Alarm Center",
+        "description": "Adds the Alarm Center panel to the sidebar. Rules and notification settings are configured in the panel."
+      }
+    },
+    "abort": {
+      "already_configured": "Alarm Center is already set up."
+    }
+  }
+}

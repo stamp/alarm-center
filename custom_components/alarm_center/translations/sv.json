@@ -1,0 +1,13 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Larmcentral",
+        "description": "Lägger till panelen Larmcentral i sidomenyn. Regler och notisinställningar konfigureras i panelen."
+      }
+    },
+    "abort": {
+      "already_configured": "Larmcentralen är redan tillagd."
+    }
+  }
+}
