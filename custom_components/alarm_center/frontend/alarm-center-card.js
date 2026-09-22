@@ -117,7 +117,9 @@ class AlarmCenterCard extends HTMLElement {
       <style>${STYLES}</style>
       <ha-card>
         <div class="head">
-          <div class="title">${esc(this._config.title || "Alarms")}</div>
+          <a class="title" data-panel href="/alarm-center">${esc(
+      this._config.title || "Alarms"
+    )}</a>
           ${unacked
         ? `<span class="pill">${unacked} unacknowledged</span>`
         : total
@@ -131,7 +133,7 @@ class AlarmCenterCard extends HTMLElement {
         }.</div>`
       }
         ${total > shown
-        ? `<div class="more">+${total - shown} more</div>`
+        ? `<a class="more" data-panel href="/alarm-center">+${total - shown} more</a>`
         : ""
       }
       </ha-card>
@@ -159,6 +161,13 @@ class AlarmCenterCard extends HTMLElement {
   }
 
   async _handleClick(ev) {
+    const panelLink = ev.target.closest("[data-panel]");
+    if (panelLink) {
+      ev.preventDefault();
+      this._openPanel();
+      return;
+    }
+
     const ackBtn = ev.target.closest("[data-ack]");
     if (ackBtn) {
       ev.stopPropagation();
@@ -177,10 +186,7 @@ class AlarmCenterCard extends HTMLElement {
     if (!row || this._config.tap_action === "none") return;
 
     if (this._config.tap_action === "panel") {
-      history.pushState(null, "", "/alarm-center");
-      this.dispatchEvent(
-        new CustomEvent("location-changed", { bubbles: true, composed: true })
-      );
+      this._openPanel();
       return;
     }
 
@@ -195,6 +201,13 @@ class AlarmCenterCard extends HTMLElement {
       );
     }
   }
+
+  _openPanel() {
+    history.pushState(null, "", "/alarm-center");
+    this.dispatchEvent(
+      new CustomEvent("location-changed", { bubbles: true, composed: true })
+    );
+  }
 }
 
 const STYLES = `
@@ -206,7 +219,14 @@ ha-card { padding: 4px 0; }
   gap: 8px;
   padding: 8px 16px 4px;
 }
-.title { font-size: 16px; font-weight: 500; flex: 1; }
+.title {
+  flex: 1;
+  color: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.title:hover { text-decoration: underline; }
 .pill {
   font-size: 12px;
   padding: 2px 8px;
@@ -268,10 +288,16 @@ ha-card { padding: 4px 0; }
   font-size: 14px;
 }
 .more {
+  display: block;
   padding: 4px 16px 8px;
   font-size: 12px;
   color: var(--secondary-text-color);
   text-align: right;
+  text-decoration: none;
+}
+.more:hover {
+  color: var(--primary-color);
+  text-decoration: underline;
 }
 /* Works even if ha-card has not been loaded by the frontend yet. */
 ha-card:not(:defined) {

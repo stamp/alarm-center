@@ -72,7 +72,7 @@ class AlarmCenterPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this._view = "alarms";
+    this._view = this._viewFromLocation();
     this._alarms = [];
     this._counts = {};
     this._rules = [];
@@ -83,6 +83,8 @@ class AlarmCenterPanel extends HTMLElement {
     this._people = [];
     this._editing = null;
     this._ready = false;
+    this._historyListening = false;
+    this._onPopState = () => this._syncViewFromLocation();
   }
 
   set hass(hass) {
@@ -98,7 +100,19 @@ class AlarmCenterPanel extends HTMLElement {
     if (this.shadowRoot.host) this.toggleAttribute("narrow", !!value);
   }
 
+  connectedCallback() {
+    if (!this._historyListening) {
+      window.addEventListener("popstate", this._onPopState);
+      this._historyListening = true;
+    }
+    this._syncViewFromLocation();
+  }
+
   disconnectedCallback() {
+    if (this._historyListening) {
+      window.removeEventListener("popstate", this._onPopState);
+      this._historyListening = false;
+    }
     if (this._unsub) {
       this._unsub.then((unsub) => unsub());
       this._unsub = null;
@@ -146,6 +160,36 @@ class AlarmCenterPanel extends HTMLElement {
     return this._hass.callWS({ type, ...payload });
   }
 
+  _viewFromLocation() {
+    const view = new URL(window.location.href).searchParams.get("view");
+    return VIEWS.some((item) => item.id === view) ? view : "alarms";
+  }
+
+  _syncViewFromLocation() {
+    const view = this._viewFromLocation();
+    if (view === this._view) return;
+
+    this._view = view;
+    this._editing = null;
+    if (!this._ready) return;
+    if (this._view === "history") this._loadHistory();
+    this._renderView();
+  }
+
+  _setView(view) {
+    if (!VIEWS.some((item) => item.id === view) || view === this._view) return;
+
+    const url = new URL(window.location.href);
+    if (view === "alarms") url.searchParams.delete("view");
+    else url.searchParams.set("view", view);
+    window.history.pushState(window.history.state, "", url);
+
+    this._view = view;
+    this._editing = null;
+    if (this._view === "history") this._loadHistory();
+    this._renderView();
+  }
+
   async _loadRules() {
     const res = await this._call("alarm_center/rules");
     this._rules = res.rules || [];
@@ -185,10 +229,10 @@ class AlarmCenterPanel extends HTMLElement {
       </div>
       <div class="tabs" id="tabs">
         ${VIEWS.map(
-          (v) => `<button class="tab" data-view="${v.id}">
+      (v) => `<button class="tab" data-view="${v.id}">
              <ha-icon icon="${v.icon}"></ha-icon><span>${v.label}</span>
            </button>`
-        ).join("")}
+    ).join("")}
       </div>
       <div class="error" id="error" hidden></div>
       <div class="content" id="content"></div>
@@ -203,10 +247,7 @@ class AlarmCenterPanel extends HTMLElement {
     this.shadowRoot.querySelector("#tabs").addEventListener("click", (ev) => {
       const tab = ev.target.closest(".tab");
       if (!tab) return;
-      this._view = tab.dataset.view;
-      this._editing = null;
-      if (this._view === "history") this._loadHistory();
-      this._renderView();
+      this._setView(tab.dataset.view);
     });
 
     const content = this.shadowRoot.querySelector("#content");
@@ -215,6 +256,7 @@ class AlarmCenterPanel extends HTMLElement {
 
     this._renderView();
     this._renderCounts();
+    if (this._view === "history") this._loadHistory();
   }
 
   _renderCounts() {
@@ -259,10 +301,9 @@ class AlarmCenterPanel extends HTMLElement {
     }
     const unacked = this._alarms.filter((a) => !a.acknowledged).length;
     return `
-      ${
-        unacked > 1
-          ? `<div class="toolbar"><button class="btn" data-ack-all>Acknowledge all (${unacked})</button></div>`
-          : ""
+      ${unacked > 1
+        ? `<div class="toolbar"><button class="btn" data-ack-all>Acknowledge all (${unacked})</button></div>`
+        : ""
       }
       <ha-card>
         <div class="list">
@@ -291,8 +332,7 @@ class AlarmCenterPanel extends HTMLElement {
     }
 
     return `
-      <div class="alarm level-${esc(alarm.level)} ${acked ? "acked" : ""} ${
-        alarm.active ? "" : "inactive"
+      <div class="alarm level-${esc(alarm.level)} ${acked ? "acked" : ""} ${alarm.active ? "" : "inactive"
       }">
         <div class="stripe"></div>
         <ha-icon class="lvl" icon="${LEVEL_ICON[alarm.level] || "mdi:alert"}"></ha-icon>
@@ -302,25 +342,22 @@ class AlarmCenterPanel extends HTMLElement {
           ${alarm.message ? `<div class="msg">${esc(alarm.message)}</div>` : ""}
         </div>
         <div class="badges">
-          ${
-            alarm.active
-              ? `<span class="badge badge-active">Active</span>`
-              : `<span class="badge">Inactive</span>`
-          }
+          ${alarm.active
+        ? `<span class="badge badge-active">Active</span>`
+        : `<span class="badge">Inactive</span>`
+      }
         </div>
         <div class="actions">
-          ${
-            acked
-              ? ""
-              : `<button class="btn" data-ack="${esc(alarm.id)}">Acknowledge</button>`
-          }
-          ${
-            alarm.entity_id
-              ? `<ha-icon-button data-more="${esc(
-                  alarm.entity_id
-                )}" label="Show entity"><ha-icon icon="mdi:open-in-new"></ha-icon></ha-icon-button>`
-              : ""
-          }
+          ${acked
+        ? ""
+        : `<button class="btn" data-ack="${esc(alarm.id)}">Acknowledge</button>`
+      }
+          ${alarm.entity_id
+        ? `<ha-icon-button data-more="${esc(
+          alarm.entity_id
+        )}" label="Show entity"><ha-icon icon="mdi:open-in-new"></ha-icon></ha-icon-button>`
+        : ""
+      }
         </div>
       </div>
     `;
@@ -342,10 +379,10 @@ class AlarmCenterPanel extends HTMLElement {
           <div class="body">
             <div class="name">${esc(a.name)}</div>
             <div class="meta">${esc(
-              `${this._formatTime(a.activated_at)} – ${this._formatTime(
-                a.deactivated_at
-              )} · acknowledged by ${a.acknowledged_by_name || "unknown"}`
-            )}</div>
+            `${this._formatTime(a.activated_at)} – ${this._formatTime(
+              a.deactivated_at
+            )} · acknowledged by ${a.acknowledged_by_name || "unknown"}`
+          )}</div>
           </div>
           <div class="badges"><span class="badge">${esc(
             LEVEL_LABEL[a.level] || a.level
@@ -366,30 +403,27 @@ class AlarmCenterPanel extends HTMLElement {
       .map(
         (rule) => `
       <div class="rule ${rule.enabled ? "" : "disabled"}">
-        <input type="checkbox" class="toggle" data-toggle="${esc(rule.id)}" ${
-          rule.enabled ? "checked" : ""
-        } ${this._isAdmin ? "" : "disabled"} title="${
-          rule.enabled ? "Monitoring" : "Disabled"
-        }">
+        <input type="checkbox" class="toggle" data-toggle="${esc(rule.id)}" ${rule.enabled ? "checked" : ""
+          } ${this._isAdmin ? "" : "disabled"} title="${rule.enabled ? "Monitoring" : "Disabled"
+          }">
         <div class="body">
           <div class="name">${esc(rule.name)}
             ${rule.auto ? `<span class="chip">auto</span>` : ""}
             <span class="chip chip-${esc(rule.level)}">${esc(
-              LEVEL_LABEL[rule.level] || rule.level
-            )}</span>
+            LEVEL_LABEL[rule.level] || rule.level
+          )}</span>
           </div>
           <div class="meta">${esc(this._ruleSummary(rule))}</div>
         </div>
         <div class="actions">
-          ${
-            this._isAdmin
-              ? `<ha-icon-button data-edit="${esc(
-                  rule.id
-                )}" label="Edit"><ha-icon icon="mdi:pencil"></ha-icon></ha-icon-button>
+          ${this._isAdmin
+            ? `<ha-icon-button data-edit="${esc(
+              rule.id
+            )}" label="Edit"><ha-icon icon="mdi:pencil"></ha-icon></ha-icon-button>
                  <ha-icon-button data-delete="${esc(
-                   rule.id
-                 )}" label="Delete"><ha-icon icon="mdi:delete"></ha-icon></ha-icon-button>`
-              : ""
+              rule.id
+            )}" label="Delete"><ha-icon icon="mdi:delete"></ha-icon></ha-icon-button>`
+            : ""
           }
         </div>
       </div>`
@@ -398,19 +432,16 @@ class AlarmCenterPanel extends HTMLElement {
 
     return `
       <div class="toolbar">
-        ${
-          this._isAdmin
-            ? `<button class="btn" data-new-rule>New rule</button>`
-            : "<span></span>"
-        }
+        ${this._isAdmin
+        ? `<button class="btn" data-new-rule>New rule</button>`
+        : "<span></span>"
+      }
         <button class="btn ghost" data-show-trash>
-          <ha-icon icon="mdi:trash-can-outline"></ha-icon> Trash${
-            this._trash.length ? ` (${this._trash.length})` : ""
-          }
+          <ha-icon icon="mdi:trash-can-outline"></ha-icon> Trash${this._trash.length ? ` (${this._trash.length})` : ""
+      }
         </button>
       </div>
-      <ha-card><div class="list">${
-        rows || `<div class="empty"><p>No rules yet.</p></div>`
+      <ha-card><div class="list">${rows || `<div class="empty"><p>No rules yet.</p></div>`
       }</div></ha-card>
       <p class="hint">Rules for problem entities are created automatically.
       Turn a rule off to stop monitoring the entity without deleting it.</p>
@@ -426,21 +457,20 @@ class AlarmCenterPanel extends HTMLElement {
           <div class="name">${esc(rule.name)}
             ${rule.auto ? `<span class="chip">auto</span>` : ""}
             <span class="chip chip-${esc(rule.level)}">${esc(
-              LEVEL_LABEL[rule.level] || rule.level
-            )}</span>
+          LEVEL_LABEL[rule.level] || rule.level
+        )}</span>
           </div>
           <div class="meta">${esc(this._ruleSummary(rule))} · deleted ${this._formatTime(
-            rule.deleted_at
-          )}</div>
+          rule.deleted_at
+        )}</div>
         </div>
         <div class="actions">
-          ${
-            this._isAdmin
-              ? `<button class="btn" data-restore="${esc(rule.id)}">Restore</button>
+          ${this._isAdmin
+            ? `<button class="btn" data-restore="${esc(rule.id)}">Restore</button>
                  <ha-icon-button data-purge="${esc(
-                   rule.id
-                 )}" label="Delete permanently"><ha-icon icon="mdi:delete-forever"></ha-icon></ha-icon-button>`
-              : ""
+              rule.id
+            )}" label="Delete permanently"><ha-icon icon="mdi:delete-forever"></ha-icon></ha-icon-button>`
+            : ""
           }
         </div>
       </div>`
@@ -453,8 +483,7 @@ class AlarmCenterPanel extends HTMLElement {
           <ha-icon icon="mdi:arrow-left"></ha-icon> Back to rules
         </button>
       </div>
-      <ha-card><div class="list">${
-        rows || `<div class="empty"><p>Trash is empty.</p></div>`
+      <ha-card><div class="list">${rows || `<div class="empty"><p>Trash is empty.</p></div>`
       }</div></ha-card>
       <p class="hint">Deleted rules are kept here so they can be restored -
       including automatically generated ones for problem entities, which
@@ -494,8 +523,8 @@ class AlarmCenterPanel extends HTMLElement {
           <label class="lbl" for="f-template">Template</label>
           <textarea id="f-template" class="code" rows="3" spellcheck="false"
             placeholder="{{ states('sensor.battery') | float(100) < 20 }}">${esc(
-              rule.template || ""
-            )}</textarea>
+        rule.template || ""
+      )}</textarea>
           <div class="hint inline">Jinja that should evaluate to true or
           false. The alarm follows the result, and entities used in the
           template are tracked automatically.</div>
@@ -542,30 +571,26 @@ class AlarmCenterPanel extends HTMLElement {
           <div class="row">
             ${this._input("f-for", "Delay before alarm (s)", rule.for_seconds || 0)}
             ${this._input("f-archive", "Archive delay (s)", rule.archive_delay, {
-              placeholder: "global",
-            })}
+      placeholder: "global",
+    })}
           </div>
           ${this._input("f-message", "Message", rule.message)}
 
-          ${
-            kind === "template"
-              ? ""
-              : `<label class="check"><input type="checkbox" id="f-unavail" ${
-                  rule.unavailable_is_problem ? "checked" : ""
-                }> Unavailable entity counts as an alarm</label>`
-          }
-          <label class="check"><input type="checkbox" id="f-notify" ${
-            rule.notify === false ? "" : "checked"
-          }> Send a notification when the alarm appears</label>
-          <label class="check"><input type="checkbox" id="f-auto-acknowledge" ${
-            rule.auto_acknowledge ? "checked" : ""
-          }> Automatically acknowledge when the condition clears</label>
+          ${kind === "template"
+        ? ""
+        : `<label class="check"><input type="checkbox" id="f-unavail" ${rule.unavailable_is_problem ? "checked" : ""
+        }> Unavailable entity counts as an alarm</label>`
+      }
+          <label class="check"><input type="checkbox" id="f-notify" ${rule.notify === false ? "" : "checked"
+      }> Send a notification when the alarm appears</label>
+          <label class="check"><input type="checkbox" id="f-auto-acknowledge" ${rule.auto_acknowledge ? "checked" : ""
+      }> Automatically acknowledge when the condition clears</label>
 
           <div class="field">
             <label class="lbl" for="f-ack-actions">Actions on acknowledge</label>
             <textarea id="f-ack-actions" class="code" rows="6" spellcheck="false">${esc(
-              ackText
-            )}</textarea>
+        ackText
+      )}</textarea>
             <div class="hint inline">JSON in Home Assistant's action syntax,
             e.g.
             <code>[{"action": "switch.turn_off", "target": {"entity_id": "switch.pump"}}]</code>.
@@ -588,9 +613,8 @@ class AlarmCenterPanel extends HTMLElement {
     return `<div class="field">
       <label class="lbl" for="${id}">${esc(label)}</label>
       <input class="native" id="${id}" type="text" value="${esc(shown)}"
-        autocomplete="off" ${
-          opts.placeholder ? `placeholder="${esc(opts.placeholder)}"` : ""
-        }>
+        autocomplete="off" ${opts.placeholder ? `placeholder="${esc(opts.placeholder)}"` : ""
+      }>
     </div>`;
   }
 
@@ -599,13 +623,13 @@ class AlarmCenterPanel extends HTMLElement {
       <label class="lbl" for="${id}">${esc(label)}</label>
       <select class="native" id="${id}">
         ${options
-          .map(
-            ([v, text]) =>
-              `<option value="${esc(v)}" ${v === value ? "selected" : ""}>${esc(
-                text
-              )}</option>`
-          )
-          .join("")}
+        .map(
+          ([v, text]) =>
+            `<option value="${esc(v)}" ${v === value ? "selected" : ""}>${esc(
+              text
+            )}</option>`
+        )
+        .join("")}
       </select>
     </div>`;
   }
@@ -691,65 +715,57 @@ class AlarmCenterPanel extends HTMLElement {
       <ha-card>
         <div class="section-title">Automatic rules</div>
         <div class="form">
-          <label class="check"><input type="checkbox" id="s-auto-enabled" ${
-            auto.enabled === false ? "" : "checked"
-          }> Create rules for new problem entities</label>
-          <label class="check"><input type="checkbox" id="s-auto-start" ${
-            auto.start_enabled === false ? "" : "checked"
-          }> New rules are enabled immediately</label>
+          <label class="check"><input type="checkbox" id="s-auto-enabled" ${auto.enabled === false ? "" : "checked"
+      }> Create rules for new problem entities</label>
+          <label class="check"><input type="checkbox" id="s-auto-start" ${auto.start_enabled === false ? "" : "checked"
+      }> New rules are enabled immediately</label>
           ${this._select(
-            "s-auto-level",
-            "Level for new rules",
-            auto.default_level || "warning",
-            LEVELS.map((l) => [l, LEVEL_LABEL[l]])
-          )}
-          ${
-            (auto.ignored || []).length
-              ? `<div class="hint inline">Ignored entities: ${esc(
-                  (auto.ignored || []).join(", ")
-                )}</div>`
-              : ""
-          }
+        "s-auto-level",
+        "Level for new rules",
+        auto.default_level || "warning",
+        LEVELS.map((l) => [l, LEVEL_LABEL[l]])
+      )}
+          ${(auto.ignored || []).length
+        ? `<div class="hint inline">Ignored entities: ${esc(
+          (auto.ignored || []).join(", ")
+        )}</div>`
+        : ""
+      }
         </div>
       </ha-card>
 
       <ha-card>
         <div class="section-title">Notifications</div>
         <div class="form">
-          <label class="check"><input type="checkbox" id="s-notify-enabled" ${
-            notify.enabled === false ? "" : "checked"
-          }> Send notifications for new alarms</label>
-          ${
-            this._people.length
-              ? this._people
-                  .map((person) => {
-                    const target = targetFor(person.person);
-                    const level = (target && target.min_level) || "warning";
-                    const services =
-                      target && target.services && target.services.length
-                        ? target.services
-                        : person.services;
-                    return `
+          <label class="check"><input type="checkbox" id="s-notify-enabled" ${notify.enabled === false ? "" : "checked"
+      }> Send notifications for new alarms</label>
+          ${this._people.length
+        ? this._people
+          .map((person) => {
+            const target = targetFor(person.person);
+            const level = (target && target.min_level) || "warning";
+            const services =
+              target && target.services && target.services.length
+                ? target.services
+                : person.services;
+            return `
               <div class="person" data-person="${esc(person.person)}">
                 <label class="check">
-                  <input type="checkbox" class="p-enabled" ${
-                    target && target.enabled !== false ? "checked" : ""
-                  }>
+                  <input type="checkbox" class="p-enabled" ${target && target.enabled !== false ? "checked" : ""
+              }>
                   <span class="pname">${esc(person.name)}</span>
                 </label>
                 <label class="check">
-                  <input type="checkbox" class="p-tts" ${
-                    target && target.tts ? "checked" : ""
-                  }>
+                  <input type="checkbox" class="p-tts" ${target && target.tts ? "checked" : ""
+              }>
                   <span>Read aloud</span>
                 </label>
                 <select class="native p-level">
                   ${LEVELS.map(
-                    (l) =>
-                      `<option value="${l}" ${
-                        level === l ? "selected" : ""
-                      }>From ${esc(LEVEL_LABEL[l].toLowerCase())}</option>`
-                  ).join("")}
+                (l) =>
+                  `<option value="${l}" ${level === l ? "selected" : ""
+                  }>From ${esc(LEVEL_LABEL[l].toLowerCase())}</option>`
+              ).join("")}
                 </select>
                 <div class="field wide">
                   <label class="lbl">Notify services</label>
@@ -757,31 +773,30 @@ class AlarmCenterPanel extends HTMLElement {
                     value="${esc(services.join(", "))}"
                     placeholder="mobile_app_phone">
                   <div class="hint inline">Auto-detected: ${esc(
-                    person.services.join(", ") || "none"
-                  )}</div>
+                person.services.join(", ") || "none"
+              )}</div>
                 </div>
               </div>`;
-                  })
-                  .join("")
-              : `<div class="hint inline">No people found.</div>`
-          }
+          })
+          .join("")
+        : `<div class="hint inline">No people found.</div>`
+      }
         </div>
       </ha-card>
 
       <ha-card>
         <div class="section-title">Reminders</div>
         <div class="form">
-          <label class="check"><input type="checkbox" id="s-digest-enabled" ${
-            digest.enabled ? "checked" : ""
-          }> Send a daily summary of what is still active</label>
+          <label class="check"><input type="checkbox" id="s-digest-enabled" ${digest.enabled ? "checked" : ""
+      }> Send a daily summary of what is still active</label>
           <div class="row">
             ${this._input("s-digest-time", "Time of day (HH:MM)", digest.time || "07:00")}
             ${this._select(
-              "s-digest-level",
-              "Include from level",
-              digest.min_level || "warning",
-              LEVELS.map((l) => [l, LEVEL_LABEL[l]])
-            )}
+        "s-digest-level",
+        "Include from level",
+        digest.min_level || "warning",
+        LEVELS.map((l) => [l, LEVEL_LABEL[l]])
+      )}
           </div>
           <div class="hint inline">One notification listing every alarm that
           is still active. Nothing is sent if the list is empty.</div>
@@ -790,12 +805,12 @@ class AlarmCenterPanel extends HTMLElement {
           0 = off)</div>
           <div class="row">
             ${LEVELS.map((level) =>
-              this._input(
-                `s-repeat-${level}`,
-                LEVEL_LABEL[level],
-                Math.round((repeat[level] || 0) / 60)
-              )
-            ).join("")}
+        this._input(
+          `s-repeat-${level}`,
+          LEVEL_LABEL[level],
+          Math.round((repeat[level] || 0) / 60)
+        )
+      ).join("")}
           </div>
           <div class="hint inline">Only alarms that are both active and
           unacknowledged are repeated - acknowledging one stops its
@@ -808,9 +823,8 @@ class AlarmCenterPanel extends HTMLElement {
       <ha-card>
         <div class="section-title">Quiet hours</div>
         <div class="form">
-          <label class="check"><input type="checkbox" id="s-quiet-enabled" ${
-            quiet.enabled ? "checked" : ""
-          }> Hold back notifications during a time window</label>
+          <label class="check"><input type="checkbox" id="s-quiet-enabled" ${quiet.enabled ? "checked" : ""
+      }> Hold back notifications during a time window</label>
           <div class="row">
             ${this._input("s-quiet-start", "From (HH:MM)", quiet.start || "22:00")}
             ${this._input("s-quiet-end", "To (HH:MM)", quiet.end || "07:00")}
@@ -818,16 +832,14 @@ class AlarmCenterPanel extends HTMLElement {
           <div class="lbl">Levels to silence</div>
           <div class="row">
             ${LEVELS.map(
-              (level) => `<label class="check">
-                <input type="checkbox" class="q-level" data-level="${level}" ${
-                  (quiet.levels || []).includes(level) ? "checked" : ""
-                }> ${esc(LEVEL_LABEL[level])}
+        (level) => `<label class="check">
+                <input type="checkbox" class="q-level" data-level="${level}" ${(quiet.levels || []).includes(level) ? "checked" : ""
+          }> ${esc(LEVEL_LABEL[level])}
               </label>`
-            ).join("")}
+      ).join("")}
           </div>
-          <label class="check"><input type="checkbox" id="s-quiet-after" ${
-            quiet.send_after === false ? "" : "checked"
-          }> Send what was held back when the window ends</label>
+          <label class="check"><input type="checkbox" id="s-quiet-after" ${quiet.send_after === false ? "" : "checked"
+      }> Send what was held back when the window ends</label>
           <div class="hint inline">Levels left unticked always get through
           immediately. Held-back alarms that resolved or were acknowledged
           before the window ended are dropped rather than delivered late.
@@ -838,27 +850,26 @@ class AlarmCenterPanel extends HTMLElement {
       <ha-card>
         <div class="section-title">Text-to-speech (TTS)</div>
         <div class="form">
-          <label class="check"><input type="checkbox" id="s-tts-enabled" ${
-            this._config.notify &&
-            this._config.notify.tts &&
-            this._config.notify.tts.enabled
-              ? "checked"
-              : ""
-          }> Read alarms aloud with text-to-speech for those who enabled it</label>
+          <label class="check"><input type="checkbox" id="s-tts-enabled" ${this._config.notify &&
+        this._config.notify.tts &&
+        this._config.notify.tts.enabled
+        ? "checked"
+        : ""
+      }> Read alarms aloud with text-to-speech for those who enabled it</label>
           <div class="row">
             ${Object.keys(LEVEL_LABEL)
-              .map((level) =>
-                this._select(
-                  `s-tts-${level}`,
-                  LEVEL_LABEL[level],
-                  ((this._config.notify &&
-                    this._config.notify.tts &&
-                    this._config.notify.tts.streams) ||
-                    {})[level] || "off",
-                  Object.keys(TTS_STREAM_LABEL).map((s) => [s, TTS_STREAM_LABEL[s]])
-                )
-              )
-              .join("")}
+        .map((level) =>
+          this._select(
+            `s-tts-${level}`,
+            LEVEL_LABEL[level],
+            ((this._config.notify &&
+              this._config.notify.tts &&
+              this._config.notify.tts.streams) ||
+              {})[level] || "off",
+            Object.keys(TTS_STREAM_LABEL).map((s) => [s, TTS_STREAM_LABEL[s]])
+          )
+        )
+        .join("")}
           </div>
           <div class="hint inline">"Alarm stream (max volume)" plays through
           Android's alarm stream and is heard even if the phone is muted or
