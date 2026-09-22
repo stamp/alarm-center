@@ -123,5 +123,5 @@ hand failed in practice, twice.
 Releasing: create a GitHub release with tag `vX.Y.Z`. The release workflow
 stamps that version into `manifest.json` inside the published
 `alarm_center.zip` asset, which is what HACS installs (`zip_release` is set
-in `hacs.json`). Bump `manifest.json` in the repo too, so manual installers
-and the tag guard in CI agree.
+in `hacs.json`), then commits the same update to the repository's default
+branch. The tag points to the pre-stamp commit by design.

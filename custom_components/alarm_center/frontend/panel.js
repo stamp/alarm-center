@@ -3,6 +3,7 @@
  *
  * Plain custom element - no build step. Form controls are native elements
  * styled with the theme's CSS variables, because Home Assistant lazy loads
+    if (rule.auto_acknowledge) parts.push("auto-acknowledge");
  * ha-textfield and friends and they are not guaranteed to be defined here.
  * ha-card, ha-icon and ha-icon-button are used where they are reliable, with
  * CSS fallbacks, and ha-entity-picker is used when the frontend has loaded it.
@@ -556,6 +557,9 @@ class AlarmCenterPanel extends HTMLElement {
           <label class="check"><input type="checkbox" id="f-notify" ${
             rule.notify === false ? "" : "checked"
           }> Send a notification when the alarm appears</label>
+          <label class="check"><input type="checkbox" id="f-auto-acknowledge" ${
+            rule.auto_acknowledge ? "checked" : ""
+          }> Automatically acknowledge when the condition clears</label>
 
           <div class="field">
             <label class="lbl" for="f-ack-actions">Actions on acknowledge</label>
@@ -1026,6 +1030,8 @@ class AlarmCenterPanel extends HTMLElement {
     if (has("#f-message")) draft.message = this._value("#f-message").trim() || null;
     if (has("#f-unavail")) draft.unavailable_is_problem = this._checked("#f-unavail");
     if (has("#f-notify")) draft.notify = this._checked("#f-notify");
+    if (has("#f-auto-acknowledge"))
+      draft.auto_acknowledge = this._checked("#f-auto-acknowledge");
 
     if (has("#f-ack-actions")) {
       const raw = this._value("#f-ack-actions");
@@ -1082,6 +1088,7 @@ class AlarmCenterPanel extends HTMLElement {
       message: draft.message || null,
       unavailable_is_problem: !!draft.unavailable_is_problem,
       notify: draft.notify !== false,
+      auto_acknowledge: !!draft.auto_acknowledge,
       on_acknowledge: draft.on_acknowledge || [],
       on_activate: draft.on_activate || [],
       on_clear: draft.on_clear || [],

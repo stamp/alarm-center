@@ -118,26 +118,22 @@ class AlarmCenterCard extends HTMLElement {
       <ha-card>
         <div class="head">
           <div class="title">${esc(this._config.title || "Alarms")}</div>
-          ${
-            unacked
-              ? `<span class="pill">${unacked} unacknowledged</span>`
-              : total
-                ? `<span class="pill pill-ok">All acknowledged</span>`
-                : ""
-          }
+          ${unacked
+        ? `<span class="pill">${unacked} unacknowledged</span>`
+        : total
+          ? `<span class="pill pill-ok">All acknowledged</span>`
+          : ""
+      }
         </div>
-        ${
-          shown
-            ? `<div class="list">${alarms.map((a) => this._row(a)).join("")}</div>`
-            : `<div class="empty">No alarms${
-                this._config.show_acknowledged ? "" : " pending"
-              }.</div>`
-        }
-        ${
-          total > shown
-            ? `<div class="more">+${total - shown} more</div>`
-            : ""
-        }
+        ${shown
+        ? `<div class="list">${alarms.map((a) => this._row(a)).join("")}</div>`
+        : `<div class="empty">No alarms${this._config.show_acknowledged ? "" : " pending"
+        }.</div>`
+      }
+        ${total > shown
+        ? `<div class="more">+${total - shown} more</div>`
+        : ""
+      }
       </ha-card>
     `;
 
@@ -149,18 +145,15 @@ class AlarmCenterCard extends HTMLElement {
   _row(alarm) {
     const acked = alarm.acknowledged;
     return `
-      <div class="row ${acked ? "acked" : ""} ${
-        alarm.active ? "" : "inactive"
+      <div class="row ${acked ? "acked" : ""} ${alarm.active ? "" : "inactive"
       }" data-row="${esc(alarm.id)}" data-entity="${esc(alarm.entity_id || "")}">
-        <ha-icon class="lvl level-${esc(alarm.level)}" icon="${
-          LEVEL_ICON[alarm.level] || "mdi:alert"
-        }"></ha-icon>
+        <ha-icon class="lvl level-${esc(alarm.level)}" icon="${LEVEL_ICON[alarm.level] || "mdi:alert"
+      }"></ha-icon>
         <div class="name">${esc(alarm.name)}</div>
-        ${
-          !acked && this._config.show_ack_button
-            ? `<button class="ack" data-ack="${esc(alarm.id)}">Ack</button>`
-            : `<span class="dot ${alarm.active ? "" : "dim"}"></span>`
-        }
+        ${!acked && this._config.show_ack_button
+        ? `<button class="ack" data-ack="${esc(alarm.id)}">Ack</button>`
+        : `<span class="dot ${alarm.active ? "" : "dim"}"></span>`
+      }
       </div>
     `;
   }
@@ -289,11 +282,17 @@ ha-card:not(:defined) {
 }
 `;
 
-customElements.define("alarm-center-card", AlarmCenterCard);
+const CARD_TYPE = "alarm-center-card";
+
+if (!customElements.get(CARD_TYPE)) {
+  customElements.define(CARD_TYPE, AlarmCenterCard);
+}
 
 window.customCards = window.customCards || [];
-window.customCards.push({
-  type: "alarm-center-card",
-  name: "Alarm Center",
-  description: "A condensed alarm list from Alarm Center.",
-});
+if (!window.customCards.some((card) => card.type === CARD_TYPE)) {
+  window.customCards.push({
+    type: CARD_TYPE,
+    name: "Alarm Center",
+    description: "A condensed alarm list from Alarm Center.",
+  });
+}

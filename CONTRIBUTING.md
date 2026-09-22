@@ -25,8 +25,9 @@ static files are served without cache headers.
 
 The version lives in `manifest.json` and nowhere else; the integration reads
 it at runtime to bust the browser cache for the frontend files. Releases are
-tagged `vX.Y.Z` and a workflow stamps that version into the published asset,
-so you do not need to edit it in a second place.
+tagged `vX.Y.Z`. When a release is published, the workflow stamps that
+version into the published asset and commits the same update to the default
+branch, so you do not need to edit it in a second place.
 
 ## Testing
 

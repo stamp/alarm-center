@@ -29,6 +29,8 @@ of who acknowledged it and when.
 * **A trash** for deleted rules, so a mistaken delete is recoverable.
 * **Per-rule actions** on activate, acknowledge and clear - full Home
   Assistant action syntax, so acknowledging can restart the faulty device.
+* **Auto-acknowledge** for rules that should move to history automatically
+  when their condition clears.
 * **Notifications to people, not devices**, with per-level Android channels,
   actionable acknowledge buttons, auto-clearing and optional TTS over the
   alarm stream.
@@ -106,8 +108,8 @@ An alarm has two independent flags, and understanding them is most of
 understanding Alarm Center:
 
 * **active** - the condition is true right now. Set and cleared by the rule.
-* **acknowledged** - a person has seen it. Set by a person, never
-  automatically.
+* **acknowledged** - a person or an auto-acknowledge rule has taken ownership
+  of it.
 
 An alarm leaves the list only when **both** are satisfied: resolved and
 acknowledged. An unacknowledged alarm that flaps off and on again is the
@@ -127,7 +129,8 @@ Every alarm source is a rule, including the auto-generated ones. Kinds:
 * `template` - a Jinja expression that evaluates to true/false
 
 Other fields: `for_seconds` (delay before the alarm fires), `archive_delay`,
-`unavailable_is_problem`, `notify`, `notify_targets`, `message`.
+`unavailable_is_problem`, `notify`, `notify_targets`, `auto_acknowledge`,
+`message`.
 
 ### Automatic rules for problem entities
 
@@ -179,7 +182,15 @@ When each one runs:
   **not** fire when a rule is disabled or deleted, because the fault didn't
   go away in that case - only the monitoring did.
 * `on_acknowledge` fires when someone acknowledges, from any route: panel,
-  card, notification button, or the `alarm_center.acknowledge` service.
+  card, notification button, or the `alarm_center.acknowledge` service. It
+  also fires for automatic acknowledgement.
+
+Enable `auto_acknowledge` on a rule when a resolved condition should not wait
+for a person. When the condition becomes false, the normal clear flow runs
+first, including `on_clear` and notification removal, then the normal
+acknowledge flow runs. The acknowledgement is attributed to
+`Auto-acknowledge`, and the configured `archive_delay` still controls the
+grace period before the alarm is written to history.
 
 ## Notifications
 

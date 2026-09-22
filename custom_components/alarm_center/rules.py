@@ -417,7 +417,13 @@ class RuleEngine:
 
         if not result:
             self._cancel_pending(rule.id)
-            self.manager.clear_alarm(rule.alarm_key)
+            alarm = self.manager.clear_alarm(rule.alarm_key)
+            if alarm is None and rule.auto_acknowledge:
+                alarm = self.manager.book.get(rule.alarm_key)
+            if alarm is not None and rule.auto_acknowledge and not alarm.acknowledged:
+                self.hass.async_create_task(
+                    self.manager.async_auto_acknowledge(alarm.id)
+                )
             return
 
         if self.manager.book.is_active(rule.alarm_key):

@@ -46,6 +46,18 @@ class ProblemRuleTest(unittest.TestCase):
         self.assertFalse(evaluate_condition(r, "off", True))
 
 
+class RuleSerializationTest(unittest.TestCase):
+    """Rule settings survive storage and default for older rules."""
+
+    def test_auto_acknowledge_round_trips(self) -> None:
+        enabled = rule(auto_acknowledge=True)
+        restored = Rule.from_dict(enabled.as_dict())
+        self.assertTrue(restored.auto_acknowledge)
+
+        legacy = Rule.from_dict({"id": "legacy", "name": "Legacy"})
+        self.assertFalse(legacy.auto_acknowledge)
+
+
 class StateRuleTest(unittest.TestCase):
     """Matching an arbitrary state string."""
 

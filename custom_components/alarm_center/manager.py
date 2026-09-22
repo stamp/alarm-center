@@ -171,6 +171,17 @@ class AlarmManager:
         self._changed()
         return alarm
 
+    async def async_auto_acknowledge(self, alarm_id: str) -> Alarm | None:
+        """Acknowledge an alarm automatically, but only while it is inactive."""
+        alarm = self.book.get_by_id(alarm_id)
+        if alarm is None or alarm.active:
+            return None
+        return await self.async_acknowledge(
+            alarm_id,
+            user_id=DOMAIN,
+            user_name="Auto-acknowledge",
+        )
+
     async def async_acknowledge_all(
         self,
         *,

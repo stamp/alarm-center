@@ -36,7 +36,7 @@ Everything that needs a running Home Assistant sits above them.
 | `key` | Stable identity of the condition (`rule:<id>` or `manual:<key>`) |
 | `id` | Identity of this particular alarm occurrence |
 | `active` | Whether the condition is true right now |
-| `acknowledged` | Whether someone has acknowledged it |
+| `acknowledged` | Whether someone or an auto-ack rule has acknowledged it |
 | `level` | `critical`, `error`, `warning`, `notice` |
 | `activated_at` / `last_activated_at` | First and most recent activation |
 | `deactivated_at` | When the alarm last stopped being active |
@@ -65,4 +65,13 @@ Once an alarm becomes both acknowledged and inactive, a timer starts
 becomes active again within that time, the move to history is cancelled, so
 a flapping sensor doesn't generate a string of alarms. Set to `0` to archive
 immediately.
+
+### auto_acknowledge
+
+A rule with `auto_acknowledge` acknowledges its alarm when the condition
+becomes false. The rule still uses the ordinary clear and acknowledge paths:
+`on_clear` runs, the active notification is removed, `on_acknowledge` runs,
+and `archive_delay` controls when the acknowledged inactive alarm is written
+to history. A quick reactivation before automatic acknowledgement is ignored
+by the automatic step, so the active alarm remains unacknowledged.
 

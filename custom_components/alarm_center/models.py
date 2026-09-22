@@ -153,6 +153,7 @@ class Rule:
     # bookkeeping
     auto: bool = False
     source_entity_id: str | None = None  # for auto rules, the discovered entity
+    auto_acknowledge: bool = False
 
     @property
     def alarm_key(self) -> str:
@@ -178,6 +179,7 @@ class Rule:
             "unavailable_is_problem": self.unavailable_is_problem,
             "notify": self.notify,
             "notify_targets": self.notify_targets,
+            "auto_acknowledge": self.auto_acknowledge,
             "message": self.message,
             "on_activate": self.on_activate,
             "on_acknowledge": self.on_acknowledge,
@@ -210,6 +212,7 @@ class Rule:
             unavailable_is_problem=data.get("unavailable_is_problem", False),
             notify=data.get("notify", True),
             notify_targets=data.get("notify_targets"),
+            auto_acknowledge=data.get("auto_acknowledge", False),
             message=data.get("message"),
             on_activate=list(data.get("on_activate") or []),
             on_acknowledge=list(data.get("on_acknowledge") or []),
