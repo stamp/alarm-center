@@ -1,15 +1,26 @@
 {
   "domain": "alarm_center",
   "name": "Alarm Center",
-  "after_dependencies": ["mobile_app", "notify"],
-  "codeowners": ["@stamp"],
+  "after_dependencies": [
+    "mobile_app",
+    "notify"
+  ],
+  "codeowners": [
+    "@stamp"
+  ],
   "config_flow": true,
-  "dependencies": ["http", "frontend", "panel_custom", "websocket_api", "person"],
+  "dependencies": [
+    "http",
+    "frontend",
+    "panel_custom",
+    "websocket_api",
+    "person"
+  ],
   "documentation": "https://github.com/stamp/alarm-center",
   "integration_type": "service",
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/stamp/alarm-center/issues",
   "requirements": [],
   "single_config_entry": true,
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
