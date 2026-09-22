@@ -46,6 +46,8 @@ of who acknowledged it and when.
 
 ### HACS (recommended)
 
+[![Open your Home Assistant instance and show the HACS repository dialog with a specific repository URL pre-filled.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stamp&repository=alarm-center&category=integration)
+
 Alarm Center is not in the default HACS list, so add it as a custom
 repository:
 
