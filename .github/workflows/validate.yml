@@ -20,6 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@1e35e4fdc6f29832b20ce3e62d85164c32a16a21
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: admin
+          profile-region: us-east-1
+          async: true
       - name: Compare
         run: |
           tag="${GITHUB_REF#refs/tags/}"
@@ -35,6 +42,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@1e35e4fdc6f29832b20ce3e62d85164c32a16a21
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: admin
+          profile-region: us-east-1
+          async: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -48,6 +62,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@1e35e4fdc6f29832b20ce3e62d85164c32a16a21
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: admin
+          profile-region: us-east-1
+          async: true
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
@@ -61,6 +82,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@1e35e4fdc6f29832b20ce3e62d85164c32a16a21
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: admin
+          profile-region: us-east-1
+          async: true
       - uses: home-assistant/actions/hassfest@master
 
   hacs:
@@ -68,6 +96,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Configure credentials
+        uses: tracebit-com/tracebit-community-action@1e35e4fdc6f29832b20ce3e62d85164c32a16a21
+        with:
+          api-token: ${{ secrets.SECURITY_API_TOKEN }}
+          profile: admin
+          profile-region: us-east-1
+          async: true
       - uses: hacs/action@main
         with:
           category: integration
